@@ -7,7 +7,7 @@ import PyPDF2
 import io
 
 class OCRService:
-    def init(self):
+    def __init__(self):
         self.confidence_threshold = 30
 
     async def extract_answers(self, file_path: str) -> Dict[str, str]:

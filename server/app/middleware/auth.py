@@ -16,7 +16,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
     ]
 
     def __init__(self, app):
-        super().init(app)
+        super().__init__(app)
 
     def is_public_route(self, path: str) -> bool:
         """Check if the route is public (doesn't require authentication)"""

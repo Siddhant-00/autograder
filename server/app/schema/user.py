@@ -1,54 +1,41 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional, Dict, Any
+from typing import Optional
 from datetime import datetime
 
-class UserBase(BaseModel):
+class StudentCreate(BaseModel):
+    student_id: str
+    full_name: str
     email: EmailStr
-    role: str = "student"
+    phone: Optional[str] = None
+    course: Optional[str] = None
+    semester: Optional[int] = None
+    batch_year: Optional[int] = None
 
-class UserCreate(UserBase):
-    password: str
-    full_name: Optional[str] = None
-
-class UserResponse(BaseModel):
+class StudentResponse(BaseModel):
     id: str
+    student_id: str
+    full_name: str
     email: str
-    role: str
-    full_name: Optional[str] = None
+    phone: Optional[str]
+    course: Optional[str]
+    semester: Optional[int]
+    batch_year: Optional[int]
+    status: str
     created_at: datetime
-    user_metadata: Optional[Dict[str, Any]] = None
 
-class AuthUser(BaseModel):
-    user_id: str
-    email: str
-    role: str
-    user_metadata: Dict[str, Any]
-    app_metadata: Dict[str, Any]
+class TeacherCreate(BaseModel):
+    teacher_id: str
+    full_name: str
+    email: EmailStr
+    phone: Optional[str] = None
+    department: Optional[str] = None
+    designation: Optional[str] = None
 
-# app/schemas/exam.py
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
-from datetime import datetime
-
-class ExamBase(BaseModel):
-    title: str
-    subject: str
-    total_marks: int
-    marking_scheme: Dict[str, Any]
-
-class ExamCreate(ExamBase):
-    pass
-
-class ExamResponse(ExamBase):
+class TeacherResponse(BaseModel):
     id: str
     teacher_id: str
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-
-class ExamSession(BaseModel):
-    id: str
-    exam_id: str
-    student_id: str
-    file_path: str
-    status: str = "pending"
-    created_at: datetime
+    full_name: str
+    email: str
+    department: Optional[str]
+    designation: Optional[str]
+    status: str
