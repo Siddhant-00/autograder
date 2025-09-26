@@ -1,7 +1,7 @@
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from datetime import datetime
-from fastapi import HTTPException, status
-
+from fastapi import HTTPException
+from app.core.config import settings
 from app.database.session import DatabaseSession
 from app.services.ocr_service import OCRService
 from app.services.ai_service import AIGradingService
@@ -9,8 +9,8 @@ from app.schema.grading import GradingResult, QuestionResult
 
 
 class GradingService:
-    def __init__(self, access_token: str):
-        self.db_session = DatabaseSession(access_token)
+    def __init__(self, access_token: str = None):
+        self.db_session = DatabaseSession(access_token or settings.SUPABASE_SERVICE_ROLE_KEY)
         self.ocr_service = OCRService()
         self.ai_service = AIGradingService()
 
@@ -21,14 +21,11 @@ class GradingService:
         user_id: str,
     ) -> GradingResult:
         """Grade an exam session"""
-
         # Get exam session details
         session_data = await self._get_exam_session(exam_session_id, user_id)
 
         # Extract answers using OCR
-        extracted_answers = await self.ocr_service.extract_answers(
-            session_data["file_path"]
-        )
+        extracted_answers = await self.ocr_service.extract_answers(session_data["file_path"])
 
         # Grade each question
         question_results = []
@@ -40,9 +37,7 @@ class GradingService:
                 extracted_answer = extracted_answers.get(question_num, "")
 
                 # Grade this question
-                question_result = await self.ai_service.grade_question(
-                    question_data, extracted_answer
-                )
+                question_result = await self.ai_service.grade_question(question_data, extracted_answer)
 
                 question_results.append(question_result)
                 total_marks += question_result.marks_obtained
@@ -88,9 +83,7 @@ class GradingService:
             return result.data[0]
 
         except Exception as e:
-            raise HTTPException(
-                status_code=500, detail=f"Failed to get grading status: {str(e)}"
-            )
+            raise HTTPException(status_code=500, detail=f"Failed to get grading status: {str(e)}")
 
     async def get_user_results(self, user_id: str) -> List[Dict[str, Any]]:
         """Get all results for a user"""
@@ -106,13 +99,9 @@ class GradingService:
             return result.data or []
 
         except Exception as e:
-            raise HTTPException(
-                status_code=500, detail=f"Failed to get user results: {str(e)}"
-            )
+            raise HTTPException(status_code=500, detail=f"Failed to get user results: {str(e)}")
 
-    async def get_detailed_result(
-        self, exam_session_id: str, user_id: str
-    ) -> Dict[str, Any]:
+    async def get_detailed_result(self, exam_session_id: str, user_id: str) -> Dict[str, Any]:
         """Get detailed result for an exam session"""
         try:
             result = (
@@ -125,16 +114,12 @@ class GradingService:
             )
 
             if not result.data:
-                raise HTTPException(
-                    status_code=404, detail="Grading result not found"
-                )
+                raise HTTPException(status_code=404, detail="Grading result not found")
 
             return result.data
 
         except Exception as e:
-            raise HTTPException(
-                status_code=500, detail=f"Failed to get detailed result: {str(e)}"
-            )
+            raise HTTPException(status_code=500, detail=f"Failed to get detailed result: {str(e)}")
 
     async def get_exam_analytics(self, exam_id: str) -> Dict[str, Any]:
         """Get analytics for an exam"""
@@ -176,16 +161,13 @@ class GradingService:
                                     "average_percentage": 0,
                                 }
                             question_analytics[q_num]["count"] += 1
-                            question_analytics[q_num]["total_marks"] += q[
-                                "marks_obtained"
-                            ]
+                            question_analytics[q_num]["total_marks"] += q["marks_obtained"]
 
             # Calculate averages
             for q_num in question_analytics:
                 if question_analytics[q_num]["count"] > 0:
                     question_analytics[q_num]["average_score"] = (
-                        question_analytics[q_num]["total_marks"]
-                        / question_analytics[q_num]["count"]
+                        question_analytics[q_num]["total_marks"] / question_analytics[q_num]["count"]
                     )
                     question_analytics[q_num]["average_percentage"] = (
                         question_analytics[q_num]["average_score"]
@@ -199,9 +181,7 @@ class GradingService:
                 "exam_id": exam_id,
                 "total_submissions": total_submissions,
                 "graded_submissions": graded_count,
-                "average_score": sum(all_scores) / len(all_scores)
-                if all_scores
-                else 0,
+                "average_score": sum(all_scores) / len(all_scores) if all_scores else 0,
                 "highest_score": max(all_scores) if all_scores else 0,
                 "lowest_score": min(all_scores) if all_scores else 0,
                 "question_analytics": question_analytics,
@@ -211,9 +191,7 @@ class GradingService:
             return analytics
 
         except Exception as e:
-            raise HTTPException(
-                status_code=500, detail=f"Failed to get exam analytics: {str(e)}"
-            )
+            raise HTTPException(status_code=500, detail=f"Failed to get exam analytics: {str(e)}")
 
     def _calculate_score_distribution(self, scores: List[float]) -> Dict[str, int]:
         """Calculate score distribution by grade bands"""
@@ -261,9 +239,7 @@ class GradingService:
             return result.data[0]
 
         except Exception as e:
-            raise HTTPException(
-                status_code=500, detail=f"Failed to get exam session: {str(e)}"
-            )
+            raise HTTPException(status_code=500, detail=f"Failed to get exam session: {str(e)}")
 
     async def _save_grading_result(self, result: GradingResult) -> None:
         """Save grading result to database"""
@@ -284,6 +260,5 @@ class GradingService:
 
         except Exception as e:
             raise HTTPException(
-                status_code=500,
-                detail=f"Failed to update exam session status: {str(e)}",
+                status_code=500, detail=f"Failed to update exam session status: {str(e)}"
             )

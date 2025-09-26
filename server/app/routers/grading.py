@@ -3,6 +3,14 @@ from app.database.connection import get_supabase, get_supabase_admin
 from app.services.grading_service import GradingService
 from app.schema.grading import GradingRequest, GradingResponse
 import asyncio
+from app.schema.exam import (
+    SubjectCreate, 
+    ExamCreate, 
+    QuestionCreate, 
+    MarkingSchemeCreate,
+    StudentEnrollmentCreate,
+    TeacherAssignmentCreate
+)
 
 router = APIRouter()
 grading_service = GradingService()

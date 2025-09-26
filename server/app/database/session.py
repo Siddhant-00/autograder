@@ -3,11 +3,16 @@ from app.database.connection import supabase_manager
 from fastapi import HTTPException, status
 
 class DatabaseSession:
-    def __init__(self, user_token: Optional[str] = None):
-        if user_token:
-            self.client = supabase_manager.get_user_client(user_token)
-        else:
+    def __init__(self, user_token: str = None):
+        """Initialize database session with appropriate client"""
+        from app.core.config import settings
+    
+        # If no user token provided or if token is the service role key, use service client
+        if not user_token or user_token == settings.SUPABASE_SERVICE_ROLE_KEY:
             self.client = supabase_manager.service_client
+        else:
+            # Use user client for actual user tokens
+            self.client = supabase_manager.get_user_client(user_token)
 
     async def create_exam_session(self, exam_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new exam session"""
