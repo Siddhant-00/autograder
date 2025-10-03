@@ -29,48 +29,6 @@ class BackendTester:
             if data:
                 print(f"   ⚠️  Error: {data}")
     
-    # def test_authentication(self):
-    #     """Test authentication system"""
-    #     self.print_separator("TESTING AUTHENTICATION")
-        
-    #     # Register student
-    #     student_data = {
-    #         "email": "test.student01564@example.com",
-    #         "password": "student15352",
-    #         "full_name": "Test Student again3",
-    #         "user_type": "student",
-    #         "student_id": "ST2024004",
-    #         "course": "Computer Science"
-    #     }
-        
-    #     response = requests.post(f"{BASE_URL}/auth/register", json=student_data)
-    #     if response.status_code == 200:
-    #         self.student_token = response.json()["access_token"]
-    #         self.print_result(True, "Student registration successful")
-    #     else:
-    #         self.print_result(False, "Student registration failed", response.text)
-    #         return False
-        
-    #     # Register teacher
-    #     teacher_data = {
-    #         "email": "test.teacher32@example.com",
-    #         "password": "teacher34",
-    #         "full_name": "Test Teacher again3",
-    #         "user_type": "teacher",
-    #         "teacher_id": "T20240005",
-    #         "department": "Computer Science"
-    #     }
-        
-    #     response = requests.post(f"{BASE_URL}/auth/register", json=teacher_data)
-    #     if response.status_code == 200:
-    #         self.teacher_token = response.json()["access_token"]
-    #         self.print_result(True, "Teacher registration successful")
-    #     else:
-    #         self.print_result(False, "Teacher registration failed", response.text)
-    #         return False
-        
-    #     return True
-
     def test_authentication(self):
         """Test authentication system using login instead of registration"""
         self.print_separator("TESTING AUTHENTICATION")
@@ -172,52 +130,13 @@ class BackendTester:
             return False
     
         headers = {"Authorization": f"Bearer {self.teacher_token}"}
-
-        # ---------------- OLD LOGIC (commented) ----------------
-        """
-        # First, create a subject
-        subject_data = {
-            "subject_code": "TESTCS101",
-            "subject_name": "Test Computer Science",
-            "department": "Computer Science",
-            "credits": 3,
-            "semester": 1
-        }
-
-        # Create subject
-        subject_response = requests.post(f"{BASE_URL}/subjects", json=subject_data, headers=headers)
-
-        # If subject creation fails (might already exist), try to get existing subject
-        if subject_response.status_code != 200:
-            pass
         
-        exam_data = {
-            "exam_code": "TESTEXAM001",
-            "subject_code": "TESTCS101",
-            "exam_name": "Test Midterm Exam",
-            "exam_type": "midterm",
-            "exam_date": "2024-12-15",
-            "start_time": "10:00",
-            "duration_minutes": 180,
-            "total_marks": 100,
-            "passing_marks": 40
-        }
-    
-        response = requests.post(f"{BASE_URL}/exams", json=exam_data, headers=headers)
-    
-        if response.status_code == 200:
-            self.exam_id = response.json()["exam"]["id"]
-            self.print_result(True, f"Real exam created with ID: {self.exam_id}")
-            return True
-        else:
-            self.print_result(False, f"Exam creation failed: {response.text}")
-            import uuid
-            self.exam_id = str(uuid.uuid4())
-            return True
-        """
-        # ---------------- NEW LOGIC (login-style fallback) ----------------
+        # Generate unique timestamp
+        timestamp = int(time.time())
+        print(f"   🕐 Using timestamp: {timestamp}")
+
         subject_data = {
-            "subject_code": "TESTCS101",
+            "subject_code": f"TESTCS101_{timestamp}",
             "subject_name": "Test Computer Science",
             "department": "Computer Science",
             "credits": 3,
@@ -225,15 +144,19 @@ class BackendTester:
         }
 
         # Try to create subject (ignore errors if it already exists)
-        requests.post(f"{BASE_URL}/subjects", json=subject_data, headers=headers)
+        subject_response = requests.post(f"{BASE_URL}/subjects", json=subject_data, headers=headers)
+        if subject_response.status_code == 200:
+            self.print_result(True, f"Subject created: {subject_data['subject_code']}")
+        else:
+            self.print_result(False, f"Subject creation failed (continuing anyway)", subject_response.text)
 
         exam_data = {
-            "exam_code": "TESTEXAM001",
-            "subject_code": "TESTCS101",
+            "exam_code": f"TESTEXAM001_{timestamp}",
+            "subject_code": f"TESTCS101_{timestamp}",
             "exam_name": "Test Midterm Exam",
             "exam_type": "midterm",
             "exam_date": "2024-12-15",
-            "start_time": "10:00",
+            "start_time": "10:00:00",
             "duration_minutes": 180,
             "total_marks": 100,
             "passing_marks": 40
@@ -246,19 +169,11 @@ class BackendTester:
             self.print_result(True, f"Exam created with ID: {self.exam_id}")
             return True
         else:
-            error = response.json()
-            if "Exam code already exists" in error.get("detail", ""):
-                # Fetch existing exam
-                existing_exam = requests.get(f"{BASE_URL}/exams/code/{exam_data['exam_code']}", headers=headers)
-                if existing_exam.status_code == 200:
-                    self.exam_id = existing_exam.json()["exam"]["id"]
-                    self.print_result(True, f"Reusing existing exam with ID: {self.exam_id}")
-                    return True
-            
-            # If still fails, fallback to mock ID
+            self.print_result(False, f"Exam creation failed: {response.text}")
+            # Fallback to mock ID if creation fails
             import uuid
             self.exam_id = str(uuid.uuid4())
-            self.print_result(False, f"Exam creation failed, using mock ID {self.exam_id}")
+            self.print_result(False, f"Using mock exam ID: {self.exam_id}")
             return True
     
     def create_test_image(self, filename="test_exam.jpg"):

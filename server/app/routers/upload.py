@@ -120,7 +120,11 @@ async def validate_file(
     }
 
 @router.get("/upload/status/{upload_id}")
-async def get_upload_status(upload_id: str, supabase_client = Depends(get_supabase)):
+async def get_upload_status(
+    upload_id: str, 
+    current_user = Depends(get_current_user),
+    supabase_client = Depends(get_supabase)
+):
     """Get upload processing status"""
     
     result = supabase_client.table("exam_uploads").select("*").eq("id", upload_id).execute()
@@ -128,7 +132,14 @@ async def get_upload_status(upload_id: str, supabase_client = Depends(get_supaba
     if not result.data:
         raise HTTPException(status_code=404, detail="Upload not found")
     
+    upload = result.data[0]
+    
+    # Verify access rights
+    if current_user["user_type"] == "student" and upload["student_id"] != current_user["user_id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
     return result.data[0]
+
 
 async def process_upload_async(upload_id: str, file_path: str, file_extension: str):
     """Background task to process uploaded file with OCR and AI grading"""

@@ -15,6 +15,9 @@ from app.schema.exam import (
 router = APIRouter()
 grading_service = GradingService()
 
+# =====================================================
+# Start Grading Route
+# =====================================================
 @router.post("/grade/{upload_id}")
 async def start_grading(
     upload_id: str,
@@ -43,6 +46,9 @@ async def start_grading(
         "status": "grading_in_progress"
     }
 
+# =====================================================
+# Async Grading Function
+# =====================================================
 async def grade_upload_async(upload_id: str):
     """Enhanced grading with proper schema alignment"""
     supabase_admin = get_supabase_admin()
@@ -132,10 +138,34 @@ async def grade_upload_async(upload_id: str):
     except Exception as e:
         print(f"Grading failed for upload {upload_id}: {str(e)}")
 
-# =====================================================
-# Additional CRUD routes for the schema entities
-# =====================================================
 
+# =====================================================
+# Grading Status Route (FIXED)
+# =====================================================
+@router.get("/grade/status/{upload_id}")
+async def get_grading_status(
+    upload_id: str,
+    supabase_client = Depends(get_supabase)
+):
+    """Get grading status for an upload"""
+    try:
+        results = supabase_client.table("grading_results").select("""
+            *,
+            questions (question_number, max_marks)
+        """).eq("upload_id", upload_id).execute()
+        
+        if not results.data:
+            raise HTTPException(status_code=404, detail="No grading results found for this upload")
+        
+        return {"grading_results": results.data}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch grading status: {str(e)}")
+
+
+# =====================================================
+# Additional CRUD routes for schema entities
+# =====================================================
 @router.post("/subjects")
 async def create_subject(
     subject_data: SubjectCreate,

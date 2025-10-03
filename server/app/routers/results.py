@@ -20,38 +20,40 @@ async def get_current_student_results(
     
     student_id = current_user["user_id"]
     
-    # Query grading_results directly
+    # Query grading_results directly with nested relations
     results = supabase_admin.table("grading_results").select("""
         *,
         exams (
             exam_name, 
             exam_type, 
             exam_date, 
-            total_marks,
-            subjects (subject_name, subject_code)
+            total_marks
         ),
-        questions (question_number, question_text, max_marks),
-        student_answers (extracted_answer, confidence_score)
+        questions (
+            question_number, 
+            question_text, 
+            max_marks
+        )
     """).eq("student_id", student_id).execute()
     
     if not results.data:
         return {"student_id": student_id, "exams": []}
     
-    # [Keep the rest of the grouping logic from get_student_results]
     # Group results by exam...
     exams_dict = {}
     for result in results.data:
+        exam_info = result.get("exams")
+        if not exam_info:
+            continue  # Skip if exam info missing
+        
         exam_id = result["exam_id"]
         if exam_id not in exams_dict:
-            exam_info = result["exams"]
             exams_dict[exam_id] = {
                 "exam_id": exam_id,
                 "exam_name": exam_info["exam_name"],
                 "exam_type": exam_info["exam_type"],
                 "exam_date": exam_info["exam_date"],
                 "total_marks": exam_info["total_marks"],
-                "subject_name": exam_info["subjects"]["subject_name"],
-                "subject_code": exam_info["subjects"]["subject_code"],
                 "obtained_marks": 0,
                 "questions": []
             }
@@ -90,9 +92,12 @@ async def get_student_results(student_id: str, supabase_client = Depends(get_sup
     # Group results by exam with enhanced data
     exams_dict = {}
     for result in results.data:
+        exam_info = result.get("exams")
+        if not exam_info:
+            continue  # Skip if exam info missing
+
         exam_id = result["exam_id"]
         if exam_id not in exams_dict:
-            exam_info = result["exams"]
             exams_dict[exam_id] = {
                 "exam_id": exam_id,
                 "exam_name": exam_info["exam_name"],
