@@ -32,17 +32,34 @@ class OCRService:
         return self._parse_answers(text)
 
     async def _extract_from_pdf(self, pdf_path: str) -> Dict[str, str]:
-        """Extract text from PDF"""
+        """Extract text from PDF by converting to images first"""
+    
+        try:
+            from pdf2image import convert_from_path
+            import tempfile
         
-        extracted_text = ""
+            # Convert PDF pages to images
+            images = convert_from_path(pdf_path)
         
-        with open(pdf_path, 'rb') as file:
-            pdf_reader = PyPDF2.PdfReader(file)
+            all_text = ""
+        
+            # Process each page
+            for page_num, image in enumerate(images, start=1):
+                # Convert PIL image to numpy array for preprocessing
+                image_np = np.array(image)
             
-            for page in pdf_reader.pages:
-                extracted_text += page.extract_text()
+                # Preprocess
+                processed_image = self._preprocess_image(image_np)
+            
+                # Extract text
+                page_text = pytesseract.image_to_string(processed_image)
+                all_text += f"\n--- Page {page_num} ---\n{page_text}"
         
-        return self._parse_answers(extracted_text)
+            return self._parse_answers(all_text)
+        
+        except Exception as e:
+            print(f"PDF OCR Error: {str(e)}")
+            return {}
 
     def _preprocess_image(self, image):
         """Preprocess image for better OCR results"""
@@ -90,13 +107,14 @@ class OCRService:
     def _is_question_line(self, line: str) -> bool:
         """Check if line contains question number"""
         import re
-        pattern = r'^\s*(?:Q|Question|Ans|Answer)?\s*[.]?\s*(\d+)[.)]\s*'
+        # Updated pattern to match "Question 1:" format
+        pattern = r'^\s*(?:Q\.?|Question|Ans\.?|Answer)?\s*(\d+)[.:]?\s*$'
         return bool(re.match(pattern, line, re.IGNORECASE))
 
     def _extract_question_number(self, line: str) -> str:
         """Extract question number from line"""
         import re
-        pattern = r'^\s*(?:Q|Question|Ans|Answer)?\s*[.]?\s*(\d+)[.)]\s*'
+        pattern = r'^\s*(?:Q\.?|Question|Ans\.?|Answer)?\s*(\d+)[.:]?\s*'
         match = re.match(pattern, line, re.IGNORECASE)
         if match:
             return f"question_{match.group(1)}"

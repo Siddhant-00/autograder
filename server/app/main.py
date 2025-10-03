@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 import uvicorn
 import os
 from app.core.config import settings
-from app.routers import upload, grading, results, auth  # Added auth
+from app.routers import upload, grading, results, auth, admin  # Added auth
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -32,9 +32,11 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Include routers
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])  # Added auth
+app.include_router(admin.router, prefix="/api/v1", tags=["Admin"])
 app.include_router(upload.router, prefix="/api/v1", tags=["Upload"])
 app.include_router(grading.router, prefix="/api/v1", tags=["Grading"])
 app.include_router(results.router, prefix="/api/v1", tags=["Results"])
+
 
 @app.get("/")
 async def root():

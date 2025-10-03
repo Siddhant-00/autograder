@@ -100,7 +100,7 @@ async def register_user(user_data: UserRegister):
             data={
                 "user_id": created_user["id"],
                 "email": created_user["email"],
-                "role": user_data.user_type
+                "user_type": user_data.user_type 
             }
         )
         
@@ -163,7 +163,7 @@ async def login_user(user_credentials: UserLogin):
             data={
                 "user_id": user["id"],
                 "email": user["email"],
-                "role": user_credentials.user_type
+                "user_type": user_credentials.user_type
             }
         )
         

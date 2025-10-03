@@ -1,8 +1,71 @@
 from fastapi import APIRouter, HTTPException, Depends
 from app.database.connection import get_supabase
+from app.routers.auth import get_current_user  # ADD THIS IMPORT
 from typing import List, Dict, Any
 
 router = APIRouter()
+
+@router.get("/results/student")
+async def get_current_student_results(
+    current_user = Depends(get_current_user),
+):
+    """Get results for current authenticated student"""
+    
+    if current_user["user_type"] != "student":
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Use admin client to bypass RLS
+    from app.database.connection import get_supabase_admin
+    supabase_admin = get_supabase_admin()
+    
+    student_id = current_user["user_id"]
+    
+    # Query grading_results directly
+    results = supabase_admin.table("grading_results").select("""
+        *,
+        exams (
+            exam_name, 
+            exam_type, 
+            exam_date, 
+            total_marks,
+            subjects (subject_name, subject_code)
+        ),
+        questions (question_number, question_text, max_marks),
+        student_answers (extracted_answer, confidence_score)
+    """).eq("student_id", student_id).execute()
+    
+    if not results.data:
+        return {"student_id": student_id, "exams": []}
+    
+    # [Keep the rest of the grouping logic from get_student_results]
+    # Group results by exam...
+    exams_dict = {}
+    for result in results.data:
+        exam_id = result["exam_id"]
+        if exam_id not in exams_dict:
+            exam_info = result["exams"]
+            exams_dict[exam_id] = {
+                "exam_id": exam_id,
+                "exam_name": exam_info["exam_name"],
+                "exam_type": exam_info["exam_type"],
+                "exam_date": exam_info["exam_date"],
+                "total_marks": exam_info["total_marks"],
+                "subject_name": exam_info["subjects"]["subject_name"],
+                "subject_code": exam_info["subjects"]["subject_code"],
+                "obtained_marks": 0,
+                "questions": []
+            }
+        
+        exams_dict[exam_id]["obtained_marks"] += float(result["final_marks"] or 0)
+        exams_dict[exam_id]["questions"].append({
+            "question_number": result["questions"]["question_number"],
+            "obtained_marks": result["final_marks"],
+        })
+    
+    return {
+        "student_id": student_id,
+        "exams": list(exams_dict.values())
+    }
 
 @router.get("/results/student/{student_id}")
 async def get_student_results(student_id: str, supabase_client = Depends(get_supabase)):

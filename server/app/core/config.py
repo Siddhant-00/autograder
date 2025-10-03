@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ALLOWED_EXTENSIONS: str = "pdf,jpg,jpeg,png"
+    MAX_FILE_SIZE: int = 10485760  # 10MB
+    UPLOAD_PATH: str = "uploads/"
 
     class Config:
         env_file = str(Path(__file__).resolve().parents[2] / ".env")  # Make sure this points to your .env file

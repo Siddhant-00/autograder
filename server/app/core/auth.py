@@ -52,7 +52,12 @@ class AuthService:
     def verify_token(self, token: str) -> dict:
         """Verify and decode JWT token"""
         try:
-            payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
+            payload = jwt.decode(
+            token, 
+            self.secret_key, 
+            algorithms=[self.algorithm],
+            options={"verify_aud": False}
+            )
             
             # Check if token has expired
             exp = payload.get("exp")
@@ -92,12 +97,12 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         # Try students table first
         student_result = supabase_admin.table("students").select("*").eq("id", user_id).execute()
         if student_result.data:
-            return {"user": student_result.data[0], "role": "student"}
+            return {"user_id": student_result.data[0]["id"], "user_type": "student"}
         
         # Try teachers table
         teacher_result = supabase_admin.table("teachers").select("*").eq("id", user_id).execute()
         if teacher_result.data:
-            return {"user": teacher_result.data[0], "role": "teacher"}
+            return {"user_id": teacher_result.data[0]["id"], "user_type": "teacher"}
         
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
