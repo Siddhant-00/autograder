@@ -1,3 +1,4 @@
+from app.core.config import settings  # Add this at the top
 from typing import Dict, Any, List
 from datetime import datetime
 from fastapi import HTTPException

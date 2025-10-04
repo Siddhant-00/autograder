@@ -22,12 +22,13 @@ grading_service = GradingService()
 async def start_grading(
     upload_id: str,
     background_tasks: BackgroundTasks,
-    supabase_client = Depends(get_supabase)
+    # supabase_client = Depends(get_supabase)
 ):
     """Start grading process for an upload"""
     
+    supabase_admin = get_supabase_admin()
     # Verify upload exists and is processed
-    upload_result = supabase_client.table("exam_uploads").select("*").eq("id", upload_id).execute()
+    upload_result = supabase_admin.table("exam_uploads").select("*").eq("id", upload_id).execute()
     
     if not upload_result.data:
         raise HTTPException(status_code=404, detail="Upload not found")
@@ -143,24 +144,44 @@ async def grade_upload_async(upload_id: str):
 # Grading Status Route (FIXED)
 # =====================================================
 @router.get("/grade/status/{upload_id}")
-async def get_grading_status(
-    upload_id: str,
-    supabase_client = Depends(get_supabase)
-):
+async def get_grading_status(upload_id: str):
     """Get grading status for an upload"""
-    try:
-        results = supabase_client.table("grading_results").select("""
-            *,
-            questions (question_number, max_marks)
-        """).eq("upload_id", upload_id).execute()
-        
-        if not results.data:
-            raise HTTPException(status_code=404, detail="No grading results found for this upload")
-        
-        return {"grading_results": results.data}
     
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch grading status: {str(e)}")
+    supabase_admin = get_supabase_admin()
+    
+    # First get the upload to verify it exists
+    upload = supabase_admin.table("exam_uploads").select("*").eq("id", upload_id).execute()
+    
+    if not upload.data:
+        raise HTTPException(status_code=404, detail="Upload not found")
+    
+    # Get student answers for this upload
+    answers = supabase_admin.table("student_answers").select("id").eq("upload_id", upload_id).execute()
+    
+    if not answers.data:
+        return {
+            "upload_id": upload_id,
+            "total_questions": 0,
+            "grading_complete": False,
+            "results_available": False
+        }
+    
+    answer_ids = [ans["id"] for ans in answers.data]
+    
+    # Get grading results for these answers
+    results = supabase_admin.table("grading_results").select("""
+        *,
+        questions (question_number, max_marks)
+    """).in_("student_answer_id", answer_ids).execute()
+    
+    total_questions = len(results.data) if results.data else 0
+    
+    return {
+        "upload_id": upload_id,
+        "total_questions": total_questions,
+        "grading_complete": total_questions > 0,
+        "results_available": total_questions > 0
+    }
 
 
 # =====================================================

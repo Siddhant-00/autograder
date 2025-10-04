@@ -12,7 +12,9 @@ class Settings(BaseSettings):
     ALLOWED_EXTENSIONS: str = "pdf,jpg,jpeg,png"
     MAX_FILE_SIZE: int = 10485760  # 10MB
     UPLOAD_PATH: str = "uploads/"
-
+    HOST: str = "0.0.0.0"
+    PORT: int = 8000
+    DEBUG: bool = True
     class Config:
         env_file = str(Path(__file__).resolve().parents[2] / ".env")  # Make sure this points to your .env file
         extra = "ignore" 

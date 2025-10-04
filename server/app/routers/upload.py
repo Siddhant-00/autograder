@@ -123,11 +123,14 @@ async def validate_file(
 async def get_upload_status(
     upload_id: str, 
     current_user = Depends(get_current_user),
-    supabase_client = Depends(get_supabase)
+    # supabase_client = Depends(get_supabase)
 ):
     """Get upload processing status"""
     
-    result = supabase_client.table("exam_uploads").select("*").eq("id", upload_id).execute()
+    from app.database.connection import get_supabase_admin
+    supabase_admin = get_supabase_admin()
+    
+    result = supabase_admin.table("exam_uploads").select("*").eq("id", upload_id).execute()
     
     if not result.data:
         raise HTTPException(status_code=404, detail="Upload not found")
